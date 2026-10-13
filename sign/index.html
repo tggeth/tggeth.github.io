@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Papertrade: authorize desk trading key</title>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Papertrade: authorize desk trading key</title>
 <style>body{font:15px system-ui,sans-serif;max-width:760px;margin:2em auto;padding:0 1em;color:#222}pre{background:#f4f1ea;padding:1em;white-space:pre-wrap;word-break:break-all;font-size:12px}button{font-size:16px;padding:.6em 1.2em}li{margin:.3em 0}.w{color:#a40}</style></head><body>
 <h2>Authorize the desk's trade-only Papertrade key</h2>
 <p>This page asks your wallet for <b>one signature</b>. It sends nothing to the network: no transaction, no gas, no submit. You copy the result back to Chief.</p>
@@ -10,6 +10,7 @@
 <div id="done" hidden><h3>Signed. Copy all of this back to Chief:</h3><pre id="out"></pre><button id="copy">Copy</button></div>
 <p id="err" class="w"></p>
 <script>
+const P=()=>window.okxwallet||window.ethereum;
 const SESSION_KEY="0x0BB303E60F0777E3f47de6b0E42e9E8DC63B9F81";
 const EXCHANGE="0x6cd5661646289fb6e65ea5c032310fded797d0a2", CHAIN_ID=999, CHAIN_HEX="0x3e7";
 const ZERO="0x0000000000000000000000000000000000000000";
@@ -20,12 +21,12 @@ let data,user;
 const $=id=>document.getElementById(id), err=m=>$("err").textContent=m;
 function rnd(){const a=crypto.getRandomValues(new Uint32Array(2));return (BigInt(a[0]&0xffff)<<32n|BigInt(a[1])).toString()}
 $("go").onclick=async()=>{try{err("");
- if(!window.ethereum) return err("No wallet found. Open this file in a browser with your wallet extension (e.g. MetaMask/Rabby).");
- [user]=await ethereum.request({method:"eth_requestAccounts"});
- if((await ethereum.request({method:"eth_chainId"})).toLowerCase()!==CHAIN_HEX){
-  try{await ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:CHAIN_HEX}]})}
-  catch(e){if(e.code===4902)await ethereum.request({method:"wallet_addEthereumChain",params:[{chainId:CHAIN_HEX,chainName:"HyperEVM",nativeCurrency:{name:"HYPE",symbol:"HYPE",decimals:18},rpcUrls:["https://rpc.hyperliquid.xyz/evm"],blockExplorerUrls:["https://hyperevmscan.io"]}]});else throw e}}
- if((await ethereum.request({method:"eth_chainId"})).toLowerCase()!==CHAIN_HEX) return err("Wallet is not on HyperEVM (chain 999).");
+ if(!P()) return err("No wallet found. Open this link inside the OKX Wallet app browser (Discover tab) or a browser with a wallet extension.");
+ [user]=await P().request({method:"eth_requestAccounts"});
+ if((await P().request({method:"eth_chainId"})).toLowerCase()!==CHAIN_HEX){
+  try{await P().request({method:"wallet_switchEthereumChain",params:[{chainId:CHAIN_HEX}]})}
+  catch(e){if(e.code===4902||e.code===-32603||/unrecognized|not added|unsupported/i.test(e.message||""))await P().request({method:"wallet_addEthereumChain",params:[{chainId:CHAIN_HEX,chainName:"HyperEVM",nativeCurrency:{name:"HYPE",symbol:"HYPE",decimals:18},rpcUrls:["https://rpc.hyperliquid.xyz/evm"],blockExplorerUrls:["https://hyperevmscan.io"]}]});else throw e}}
+ if((await P().request({method:"eth_chainId"})).toLowerCase()!==CHAIN_HEX) return err("Wallet is not on HyperEVM (chain 999).");
  const now=Math.floor(Date.now()/1000);
  const message={user:user.toLowerCase(),key:SESSION_KEY.toLowerCase(),expiry:String(now+30*86400),feeAddress:ZERO,nonce:rnd(),deadline:String(now+3600)};
  data={types,primaryType:"RegisterSessionKey",domain,message};
@@ -34,7 +35,7 @@ $("go").onclick=async()=>{try{err("");
  $("raw").textContent=JSON.stringify(data,null,2); $("review").hidden=false;
 }catch(e){err(e.message||String(e))}};
 $("sign").onclick=async()=>{try{err("");
- const sig=await ethereum.request({method:"eth_signTypedData_v4",params:[user,JSON.stringify(data)]});
+ const sig=await P().request({method:"eth_signTypedData_v4",params:[user,JSON.stringify(data)]});
  const r="0x"+sig.slice(2,66), s="0x"+sig.slice(66,130); let v=parseInt(sig.slice(130,132),16); if(v<27)v+=27;
  const payload={action:"registerSessionKey",signed:{...data.message,v:String(v),r,s},signature:sig,domain};
  $("out").textContent=JSON.stringify(payload,null,2); $("done").hidden=false; $("review").hidden=true;
