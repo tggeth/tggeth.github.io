@@ -21,6 +21,7 @@ let data,user;
 const $=id=>document.getElementById(id), err=m=>$("err").textContent=m;
 function rnd(){const a=crypto.getRandomValues(new Uint32Array(2));return (BigInt(a[0]&0xffff)<<32n|BigInt(a[1])).toString()}
 $("go").onclick=async()=>{try{err("");
+ for(let i=0;i<20&&!P();i++)await new Promise(r=>setTimeout(r,150));
  if(!P()) return err("No wallet found. Open this link inside the OKX Wallet app browser (Discover tab) or a browser with a wallet extension.");
  [user]=await P().request({method:"eth_requestAccounts"});
  if((await P().request({method:"eth_chainId"})).toLowerCase()!==CHAIN_HEX){
